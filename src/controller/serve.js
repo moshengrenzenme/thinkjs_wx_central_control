@@ -1,6 +1,6 @@
 // 微信公众号服务端对接
 
-import {getConfigById} from "../api/wechat";
+import {getConfigById} from "../api/wechat.official";
 
 module.exports = class extends think.Controller {
 
@@ -22,7 +22,10 @@ module.exports = class extends think.Controller {
     async eventAction() {
         let that = this;
         let {signature, timestamp, nonce, openid} = that.get();
-        let {ToUserName, FromUserName, CreateTime, MsgType, Event, EventKey, Ticket, Latitude, Longitude, Precision} = that.post();
+        let {
+            ToUserName, FromUserName, CreateTime, MsgType, Event, EventKey, Ticket, Latitude, Longitude, Precision
+            ScanCodeInfo, ScanType, ScanResult
+        } = that.post();
         switch (Event) {
             case 'subscribe':// 关注
                 console.log('用户关注了');
@@ -30,15 +33,29 @@ module.exports = class extends think.Controller {
             case 'unsubscribe':// 取消关注
                 console.log('用户取消关注了');
                 break;
-            case 'SCAN':// 已关注扫码
+            case 'SCAN':// 用户已关注后扫码
                 break;
             case 'LOCATION':// 地理位置
                 break;
-            case 'CLICK':// 自定义菜菜单
-                break;
-            case 'VIEW':// 跳转
-                break;
             case 'TEMPLATESENDJOBFINISH':// 模版消息发送完毕
+                break;
+            case 'CLICK':// 点击菜单 => 拉取消息
+                break;
+            case 'VIEW':// 点击菜单 => 跳转链接
+                break;
+            case 'view_miniprogram': // 点击菜单 => 跳转小程序的事件推送
+                break;
+            case 'scancode_push': // 扫码推事件的事件推送
+                break;
+            case 'scancode_waitmsg': // 扫码推事件的事件推送
+                break;
+            case 'pic_sysphoto': // 扫码推事件且弹出“消息接收中”提示框的事件推送
+                break;
+            case 'pic_photo_or_album': // 弹出拍照或者相册发图的事件推送
+                break;
+            case 'pic_weixin': // 弹出微信相册发图器的事件推送
+                break;
+            case 'location_select': // 弹出地理位置选择器的事件推送
                 break;
         }
         return that.success('')

@@ -23,7 +23,7 @@ export const getConfigById = async id => {
   *   success => { access_token:'', expires_in:''}
   * */
 export const getAccessTokenById = async id => {
-    let accessTokenInfo = await think.cache(`wechatAccessTokenById_${id}`);
+    let accessTokenInfo = await think.cache(`wechatOfficialAccessTokenById_${id}`);
     if (accessTokenInfo) return res.suc(accessTokenInfo);
     let wxCfgRes = await getConfigById(id);
     if (wxCfgRes.code !== 0) return wxCfgRes;
@@ -34,7 +34,7 @@ export const getAccessTokenById = async id => {
         params: {grant_type: 'client_credential', appid: appid, secret: appsecret}
     });
     if (data.errcode) return res.err(data.errmsg, data.errcode);
-    await think.cache(`wechatAccessTokenById_${id}`, data);
+    await think.cache(`wechatOfficialAccessTokenById_${id}`, data);
     return res.suc(data);
 }
 
@@ -46,7 +46,7 @@ export const getAccessTokenById = async id => {
 *   success => {ticket:'',expires_in:0000}，
 * */
 export const getJsapiTicketById = async id => {
-    let jsapiTicketInfo = await think.cache(`wechatJsapiTicketById_${id}`);
+    let jsapiTicketInfo = await think.cache(`wechatOfficialJsapiTicketById_${id}`);
     if (jsapiTicketInfo) return res.suc(jsapiTicketInfo);
     let accessTokenRes = await getAccessTokenById(id);
     if (accessTokenRes.code != 0) return accessTokenRes;
@@ -57,8 +57,33 @@ export const getJsapiTicketById = async id => {
         params: {access_token: access_token, type: 'jsapi'}
     })
     if (data.errcode) return res.err(data.errmsg, data.errcode);
-    await think.cache(`wechatJsapiTicketById_${id}`, data);
+    await think.cache(`wechatOfficialJsapiTicketById_${id}`, data);
     return res.suc(data);
+}
+
+/*
+* 获取微信服务器地址
+* @argument
+*   id：微信公众号id
+*   type：类型（callback / api）
+* @return
+*   success => ["127.0.0.1","".....]
+* */
+export const getIps = async (id, type = 'callback') => {
+    let accessTokenRes = await getAccessTokenById(id);
+    if (accessTokenRes.code != 0) return accessTokenRes;
+    let {data: {access_token}} = accessTokenRes;
+    let urls = {
+        callback: 'https://api.weixin.qq.com/cgi-bin/getcallbackip',
+        api: 'https://api.weixin.qq.com/cgi-bin/get_api_domain_ip'
+    }
+    let {data} = await axios({
+        method: 'get',
+        url: urls[type],
+        params: {access_token: access_token}
+    })
+    if (data.errcode) return res.err(data.errmsg, data.errcode);
+    return res.suc(data.ip_list);
 }
 
 /*
@@ -99,6 +124,58 @@ export const getCurrSelfMenuInfo = async id => {
         method: 'get',
         url: 'https://api.weixin.qq.com/cgi-bin/get_current_selfmenu_info',
         params: {access_token: access_token}
+    })
+    if (data.errcode) return res.err(data.errmsg, data.errcode);
+    return res.suc(data);
+}
+
+/*
+* 创建自定义菜单接口
+* @argument
+*   id：微信公众号id
+*   button ： [{ => 一级菜单数组，个数应为1~3个
+*       "name": "", => 菜单标题，不超过16个字节，子菜单不超过60个字节
+*       "sub_button": [{ => 二级菜单数组，个数应为1~5个
+*           "type": "", => 菜单的响应动作类型，view表示网页类型，click表示点击类型，miniprogram表示小程序类型
+*           "key": "", => 菜单KEY值，用于消息接口推送，不超过128字节
+*           "media_id": "", => 调用新增永久素材接口返回的合法media_id
+*           "url": "", => 网页 链接，用户点击菜单可打开链接，不超过1024字节。 type为miniprogram时，不支持小程序的老版本客户端将打开本url。
+*           "appid": "", => 小程序的appid（仅认证公众号可配置）
+*           "pagepath": "", => 小程序的页面路径
+*       }]
+*   }]
+* @return
+*   success => {"errcode":0,"errmsg":"ok"}
+* */
+export const createMenu = async (id, button = []) => {
+    let accessTokenRes = await getAccessTokenById(id);
+    if (accessTokenRes.code != 0) return accessTokenRes;
+    let {data: {access_token}} = accessTokenRes;
+    let {data} = await axios({
+        method: 'post',
+        url: ' https://api.weixin.qq.com/cgi-bin/menu/create',
+        params: {access_token: access_token},
+        data: {button: button}
+    })
+    if (data.errcode) return res.err(data.errmsg, data.errcode);
+    return res.suc(data);
+}
+
+/*
+* 删除自定义菜单接口
+* @argument
+*   id：微信公众号id
+* @return
+*   success => {"errcode":0,"errmsg":"ok"}
+* */
+export const deleteMenu = async id => {
+    let accessTokenRes = await getAccessTokenById(id);
+    if (accessTokenRes.code != 0) return accessTokenRes;
+    let {data: {access_token}} = accessTokenRes;
+    let {data} = await axios({
+        method: 'post',
+        url: ' https://api.weixin.qq.com/cgi-bin/menu/delete',
+        params: {access_token: access_token},
     })
     if (data.errcode) return res.err(data.errmsg, data.errcode);
     return res.suc(data);
@@ -396,6 +473,28 @@ export const getPrivateTemplateAll = async id => {
         url: 'https://api.weixin.qq.com/cgi-bin/template/get_all_private_template',
         params: {access_token: access_token}
     });
+    if (data.errcode) return res.err(data.errmsg, data.errcode);
+    return res.suc(data.template_list);
+}
+
+/*
+* 删除模版
+* @argument
+*   id：微信公众号id
+*   templateId：公众帐号下模板消息ID
+* @return
+*   success => {"errcode" : 0,"errmsg" : "ok"}
+* */
+export const deletePrivateTemplate = async (id, templateId) => {
+    let accessTokenRes = await getAccessTokenById(id);
+    if (accessTokenRes.code != 0) return accessTokenRes;
+    let {data: {access_token}} = accessTokenRes;
+    let {data} = await axios({
+        method: 'post',
+        url: 'https://api.weixin.qq.com/cgi-bin/template/del_private_template',
+        params: {access_token: access_token},
+        data: {template_id: templateId}
+    })
     if (data.errcode) return res.err(data.errmsg, data.errcode);
     return res.suc(data.template_list);
 }

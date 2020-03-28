@@ -6,7 +6,7 @@ import {
     getUserInfo, getOpenIdByAuth, getUserInfoByAuth,
     customSendText, customSendVoice, customSendImage, customSendMusic, customSendArticle,
     createParamsQr, createShortUrl
-} from "../api/wechat";
+} from "../api/wechat.official";
 import {getNonceStr, getSignature, getTimestamp, httpRes} from "../lib/utils";
 import {CENTRAL_CONTROL_SERVE_URL} from "../lib/config";
 
