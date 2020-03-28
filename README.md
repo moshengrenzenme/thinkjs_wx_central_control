@@ -35,6 +35,7 @@
 - 批量发送客服消息 - 图文
 - 获取已添加模版消息列表
 - 批量发送模版消息
+- 删除模版
 - 生成参数二维码
 - 生成短链接
 - 接收微信服务器推送信息
@@ -168,7 +169,7 @@ module.exports = [
 ];
 ```
 
-### /src/api/wechat.js
+### /src/api/wechat.official.js
 
 > 基于微信官方api的接口封装，文件中注释更全。
 
@@ -186,9 +187,13 @@ export const getConfigById = async id => {
 // ..............
 ```
 
-### /src/controller/wxopen
+### /src/api/wechat.miniprogram.js
 
-> 对外开放的api接口
+> 基于微信小程序官方api的接口封装
+
+### /src/controller/wxopen.js
+
+> 对外开放关于微信公众号的api接口
 
 ```javascript
 module.exports = class extends think.Controller {
@@ -205,9 +210,9 @@ module.exports = class extends think.Controller {
 }
 ```
 
-### /src/controller/serve
+### /src/controller/serve.js
 
-> 响应微信公众号接口
+> 响应微信公众号推送消息的接口
 
 ```javascript
 module.exports = class extends think.Controller {
