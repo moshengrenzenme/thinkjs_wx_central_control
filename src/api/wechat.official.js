@@ -1,18 +1,23 @@
 // 微信接口封装
-import axios from 'axios'
+
+const fs = require('fs');
+const request = require('request');
+import axios from 'axios';
 import {httpRes as res} from "../lib/utils";
-import {WECHAT_LIST} from "../lib/config";
+import {MODEL} from "../lib/config";
 
 /*
 * 获取微信公众号配置信息
 * @argument
 *   id：微信公众号id
 * @return
-*   success => {id:'',name:'',appid:'',appsecret:''}
+*   success => {id:'',name:'',appid:'',secret:''}
 * */
 export const getConfigById = async id => {
-    for (let item of WECHAT_LIST) if (Number(id) === item.id) return res.suc(item)
-    return res.err('未查找到公众号')
+    if (!id) return res.errArgumentMiss;
+    let wechatInfo = await think.model(MODEL.TABLE.OFFICIAL).where({id: id}).find();
+    if (think.isEmpty(wechatInfo)) return res.err('未查找到公众号')
+    return res.suc(wechatInfo);
 }
 
 /*
@@ -23,17 +28,20 @@ export const getConfigById = async id => {
   *   success => { access_token:'', expires_in:''}
   * */
 export const getAccessTokenById = async id => {
+    // 1、获取缓存
     let accessTokenInfo = await think.cache(`wechatOfficialAccessTokenById_${id}`);
     if (accessTokenInfo) return res.suc(accessTokenInfo);
+    // 2、缓存没有，获取接口
     let wxCfgRes = await getConfigById(id);
     if (wxCfgRes.code !== 0) return wxCfgRes;
-    let {data: {appid, appsecret}} = wxCfgRes;
+    let {data: {appid, secret}} = wxCfgRes;
     let {data} = await axios({
         method: 'get',
         url: `https://api.weixin.qq.com/cgi-bin/token`,
-        params: {grant_type: 'client_credential', appid: appid, secret: appsecret}
+        params: {grant_type: 'client_credential', appid: appid, secret: secret}
     });
     if (data.errcode) return res.err(data.errmsg, data.errcode);
+    // 3、保存缓存
     await think.cache(`wechatOfficialAccessTokenById_${id}`, data);
     return res.suc(data);
 }
@@ -46,8 +54,10 @@ export const getAccessTokenById = async id => {
 *   success => {ticket:'',expires_in:0000}，
 * */
 export const getJsapiTicketById = async id => {
+    // 1、获取缓存
     let jsapiTicketInfo = await think.cache(`wechatOfficialJsapiTicketById_${id}`);
     if (jsapiTicketInfo) return res.suc(jsapiTicketInfo);
+    // 2、缓存没有，获取接口
     let accessTokenRes = await getAccessTokenById(id);
     if (accessTokenRes.code != 0) return accessTokenRes;
     let {data: {access_token}} = accessTokenRes;
@@ -57,6 +67,7 @@ export const getJsapiTicketById = async id => {
         params: {access_token: access_token, type: 'jsapi'}
     })
     if (data.errcode) return res.err(data.errmsg, data.errcode);
+    // 3、保存缓存
     await think.cache(`wechatOfficialJsapiTicketById_${id}`, data);
     return res.suc(data);
 }
@@ -207,6 +218,16 @@ export const deleteMenu = async id => {
 *   }
 * */
 export const getUserInfo = async (id, openid) => {
+    // 1、获取缓存
+    let cacheUserInfo = await think.cache(`wechatOfficialUser_${id}_${openid}`);
+    if (cacheUserInfo && cacheUserInfo.subscribe === 1) return res.suc(cacheUserInfo);
+    // 2、缓存没有或未关注，获取数据库
+    let modelUserInfo = await think.model(MODEL.TABLE.OFFICIAL_USER).where({openid: openid}).find();
+    if (!think.isEmpty(modelUserInfo) && modelUserInfo.subscribe === 1) {
+        await think.cache(`wechatOfficialUser_${id}_${openid}`, modelUserInfo);
+        return res.suc(cacheUserInfo);
+    }
+    // 3、数据库没有或未关注，获取接口
     let accessTokenRes = await getAccessTokenById(id);
     if (accessTokenRes.code != 0) return accessTokenRes;
     let {data: {access_token}} = accessTokenRes;
@@ -216,7 +237,17 @@ export const getUserInfo = async (id, openid) => {
         params: {access_token: access_token, openid: openid, lang: 'zh_CN'}
     });
     if (data.errcode) return res.err(data.errmsg, data.errcode);
+    // 4、接口获取回，更新数据库、保存缓存
+    await think.model(MODEL.TABLE.OFFICIAL_USER).thenUpdate(Object.assign({official_id: id}, data), {openid: openid});
+    await think.cache(`wechatOfficialUser_${id}_${openid}`, data);
     return res.suc(data);
+}
+
+/*
+* 删除用户信息缓存
+* */
+export const resetCacheUserInfo = async (id, openid) => {
+    await think.cache(`wechatOfficialUser_${id}_${openid}`, null);
 }
 
 /*
@@ -276,6 +307,7 @@ export const getUserInfoByAuth = async (openid, accessToken) => {
         params: {access_token: accessToken, openid: openid, lang: 'zh_CN'}
     })
     if (data.errcode) return res.err(data.errmsg, data.errcode);
+    await think.model(MODEL.TABLE.OFFICIAL_USER).thenUpdate(data, {openid: openid});
     return res.suc(data);
 }
 
@@ -599,3 +631,62 @@ export const createShortUrl = async (id, url) => {
     return res.suc(data);
 }
 
+/*
+* 新增临时素材
+* @argument
+*   id：微信公众号id
+*   type：媒体文件类型，分别有图片（image）、语音（voice）、视频（video）和缩略图（thumb，主要用于视频与音乐格式的缩略图）
+*   contentType：文件类型
+*   path：文件路径
+* @return
+*   success => {
+*       type:'', => 媒体文件类型，分别有图片（image）、语音（voice）、视频（video）和缩略图（thumb，主要用于视频与音乐格式的缩略图）
+*       media_id:'', => 媒体文件上传后，获取标识
+*       created_at:'' => 媒体文件上传时间戳
+*   }
+* */
+export const uploadMedia = async (id, type, contentType, path) => {
+    let allowType = ['image', 'voice', 'video', 'thumb'];
+    let suffix = contentType.split('/')[1];
+    if (!allowType.includes(type)) return res.err('不合适的文件文件类型');
+    let accessTokenRes = await getAccessTokenById(id);
+    if (accessTokenRes.code != 0) return accessTokenRes;
+    let {data: {access_token}} = accessTokenRes;
+    return new Promise(function (resolve, reject) {
+        request.post({
+            url: `https://api.weixin.qq.com/cgi-bin/media/upload?access_token=${access_token}&type=${type}`,
+            formData: {
+                media: {
+                    value: fs.readFileSync(path),
+                    options: {filename: `${think.uuid}.${suffix}`, contentType: contentType}
+                }
+            }
+        }, function optionalCallback(err, httpResponse, body) {
+            if (err) {
+                resolve(res.err('upload failed:' + err.toString()))
+            }
+            resolve(res.suc(JSON.parse(body)));
+        });
+    })
+}
+
+/*
+* 获取临时素材
+* @argument
+*   id：微信公众号id
+*   mediaId：媒体文件ID
+* @return
+*   success => {}
+* */
+export const getMedia = async (id, mediaId) => {
+    let accessTokenRes = await getAccessTokenById(id);
+    if (accessTokenRes.code != 0) return accessTokenRes;
+    let {data: {access_token}} = accessTokenRes;
+    let {data} = await axios({
+        method: 'get',
+        url: 'https://api.weixin.qq.com/cgi-bin/media/get',
+        params: {access_token: access_token, media_id: mediaId}
+    })
+    if (data.errcode) return res.err(data.errmsg, data.errcode);
+    return res.suc(data);
+}

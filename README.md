@@ -51,7 +51,51 @@
   - 接收图片消息
   - 接收语音消息
 
+## 数据库
 
+### official
+
+> 公众号配置表
+
+```mysql
+create table official
+(
+    id     int auto_increment comment '主键'
+        primary key,
+    name   varchar(255) null comment '公众号名称',
+    `desc` varchar(255) null comment '公众号说明',
+    appid  varchar(255) null comment '公众号appid',
+    secret varchar(255) null comment '公众号secret'
+)
+    comment '公众号';
+```
+
+### official_user
+
+> 公众号用户表
+
+```mysql
+create table official_user
+(
+    id             int auto_increment comment '主键'
+        primary key,
+    official_id    int          not null comment '公众号id',
+    nickname       varchar(255) null comment '昵称',
+    sex            int          null comment '性别',
+    language       varchar(255) null comment '语言',
+    subscribe      int          null comment '是否关注',
+    province       varchar(255) null comment '省份',
+    country        varchar(255) null comment '国家',
+    headimgurl     longtext     null comment '头像',
+    subscribe_time double       null comment '关注时间',
+    openid         varchar(255) null comment '用户id',
+    remark         varchar(255) null comment '备注',
+    groupid        varchar(255) null comment '分组id',
+    city           varchar(255) null comment '城市',
+    unionid        varchar(255) null comment '开放平台id'
+)
+    comment '公众号_用户';
+```
 
 ## 开发测试
 
@@ -127,8 +171,8 @@ npm run start
 // 微信中控生产环境域名地址
 export const CENTRAL_CONTROL_SERVE_URL = '';
 
-// 对接的微信公众号列表
-export const WECHAT_LIST = [{id: 0, name: '微信测试号', appid: '', appsecret: ''}]
+// 数据库相关
+export const MODEL = {}
 
 // 在think-wechat中间件插件配置处使用 => src/config/middleware/
 export const WECHAT_DEVELOPER_ROUTE = '/serve';
@@ -147,6 +191,20 @@ export const getTimestamp = () => parseInt(Date.now() / 1000);
 export const getNonceStr = () => Math.random().toString(36).substr(2, 15);
 export const getSignature = (params) => sha1(Object.keys(params).sort().map(key => `${key.toLowerCase()}=${params[key]}`).join('&'));
 //......
+```
+
+### /src/config/adapter.js
+
+> 在这里修改数据库配置信息
+
+```javascript
+import {MODEL} from "../lib/config";
+
+exports.model = {
+    type: 'mysql',
+    common: {logConnect: isDev, logSql: isDev, logger: msg => think.logger.info(msg)},
+    mysql: Object.assign({handle: mysql, prefix: '', dateStrings: true}, MODEL.CONFIG)
+};
 ```
 
 ### /src/config/middleware.js
@@ -180,8 +238,10 @@ import {WECHAT_LIST} from "../lib/config";
 
 // 获取微信公众号配置信息
 export const getConfigById = async id => {
-    for (let item of WECHAT_LIST) if (Number(id) === item.id) return res.suc(item)
-    return res.err('未查找到公众号')
+    if (!id) return res.errArgumentMiss;
+    let wechatInfo = await think.model(MODEL.TABLE.OFFICIAL).where({id: id}).find();
+    if (think.isEmpty(wechatInfo)) return res.err('未查找到公众号')
+    return res.suc(wechatInfo);
 }
 
 // ..............
