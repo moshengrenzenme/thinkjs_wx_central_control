@@ -1,6 +1,7 @@
 // 微信公众号服务端对接
 
-import {getConfigById} from "../api/wechat.official";
+import {getConfigById, getUserInfo, resetCacheUserInfo} from "../api/wechat.official";
+import {MODEL} from "../lib/config";
 
 module.exports = class extends think.Controller {
 
@@ -23,15 +24,19 @@ module.exports = class extends think.Controller {
         let that = this;
         let {signature, timestamp, nonce, openid} = that.get();
         let {
-            ToUserName, FromUserName, CreateTime, MsgType, Event, EventKey, Ticket, Latitude, Longitude, Precision
+            ToUserName, FromUserName, CreateTime, MsgType, Event, EventKey, Ticket, Latitude, Longitude, Precision,
             ScanCodeInfo, ScanType, ScanResult
         } = that.post();
+        console.log(Event);
         switch (Event) {
             case 'subscribe':// 关注
                 console.log('用户关注了');
+                await resetCacheUserInfo(that.wechatInfo.id, openid); // 重置用户信息缓存
+                await getUserInfo(that.wechatInfo.id, openid); // 获取一次用户信息，保证数据库内是最新的数据
                 break;
             case 'unsubscribe':// 取消关注
                 console.log('用户取消关注了');
+                await think.model(MODEL.TABLE.OFFICIAL_USER).where({openid: openid}).update({subscribe: 0}); // 修改为未关注
                 break;
             case 'SCAN':// 用户已关注后扫码
                 break;
@@ -87,8 +92,9 @@ module.exports = class extends think.Controller {
     async __before() {
         let that = this;
         let {id} = that.get();
-        that.wechatInfo = await getConfigById(id);
-        if (think.isEmpty(that.wechatInfo)) return that.success('')
+        let cfgRes = await getConfigById(id);
+        if (cfgRes.code !== 0) return that.json(cfgRes);
+        that.wechatInfo = cfgRes.data;
     }
 
     // 如果没找到默认回复

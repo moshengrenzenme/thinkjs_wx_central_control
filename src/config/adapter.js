@@ -5,6 +5,7 @@ const mysql = require('think-model-mysql');
 const {Console, File, DateFile} = require('think-logger3');
 const path = require('path');
 const isDev = think.env === 'development';
+import {MODEL} from "../lib/config";
 
 /**
  * cache adapter config
@@ -29,22 +30,8 @@ exports.cache = {
  */
 exports.model = {
     type: 'mysql',
-    common: {
-        logConnect: isDev,
-        logSql: isDev,
-        logger: msg => think.logger.info(msg)
-    },
-    mysql: {
-        handle: mysql,
-        database: '',
-        prefix: 'think_',
-        encoding: 'utf8',
-        host: '127.0.0.1',
-        port: '',
-        user: 'root',
-        password: 'root',
-        dateStrings: true
-    }
+    common: {logConnect: isDev, logSql: isDev, logger: msg => think.logger.info(msg)},
+    mysql: Object.assign({handle: mysql, prefix: '', dateStrings: true}, MODEL.CONFIG)
 };
 
 /**

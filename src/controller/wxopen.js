@@ -5,7 +5,8 @@ import {
     getPrivateTemplateAll, templateSend,
     getUserInfo, getOpenIdByAuth, getUserInfoByAuth,
     customSendText, customSendVoice, customSendImage, customSendMusic, customSendArticle,
-    createParamsQr, createShortUrl
+    createParamsQr, createShortUrl,
+    uploadMedia, getMedia
 } from "../api/wechat.official";
 import {getNonceStr, getSignature, getTimestamp, httpRes} from "../lib/utils";
 import {CENTRAL_CONTROL_SERVE_URL} from "../lib/config";
@@ -200,6 +201,27 @@ module.exports = class extends think.Controller {
     }
 
     /*
+    * 发送客服消息 => 图片文件
+    * @post
+    *   openid：微信openid
+    *   file：发送的文件
+    * @return
+    *   null
+    * */
+    async custom_send_image_fileAction() {
+        let that = this;
+        let {openid} = that.post();
+        let {image} = that.file();
+        if (think.isEmpty(openid) || think.isEmpty(image) || !think.isFile(image.path) || image.size === 0) return that.json(httpRes.errArgumentMiss);
+        let {type, path} = image;
+        let uploadRes = await uploadMedia(that.wechatInfo.id, type.split('/')[0], type, path);
+        if (uploadRes.code !== 0) return that.json(uploadRes);
+        let {data: {media_id}} = uploadRes;
+        let res = await customSendImage(that.wechatInfo.id, openid, media_id);
+        return that.json(res);
+    }
+
+    /*
     * 发送客服消息 => 音乐
     * @post
     *   list : 批量列表
@@ -246,7 +268,7 @@ module.exports = class extends think.Controller {
     * @return
     *   null
     * */
-    async custom_send_ArticleAction() {
+    async custom_send_articleAction() {
         let that = this;
         let {list} = that.post();
         if (think.isEmpty(list)) return that.json(httpRes.errArgumentMiss);
@@ -357,9 +379,9 @@ module.exports = class extends think.Controller {
     async __before() {
         let that = this;
         let {id} = that.get();
-        let {data: wechatInfo} = await getConfigById(id);
-        if (think.isEmpty(wechatInfo)) return that.json(httpRes.errSysBusy)
-        that.wechatInfo = wechatInfo;
+        let cfgRes = await getConfigById(id);
+        if (cfgRes.code !== 0) return that.json(cfgRes)
+        that.wechatInfo = cfgRes.data;
     }
 
     // 如果没找到默认回复

@@ -6,13 +6,22 @@
 export const CENTRAL_CONTROL_SERVE_URL = 'https://1848affa.ngrok.io';
 
 /*
-* 对接的微信公众号列表
-*   对外提供的接口，或微信接口配置处，需要携带对应公众号id（url?id=0），否则接口调用不成功；
-*   也可以用数据库的形式存储
+* 数据库相关
 * */
-export const WECHAT_LIST = [
-    {id: 0, name: '微信测试号', appid: 'wxb220379cdcbc10e7', appsecret: 'fc4264320146af315cb05a1a2d3d5b13'}
-]
+export const MODEL = {
+    CONFIG: { // 配置相关
+        host: '127.0.0.1',
+        port: '3306',
+        database: 'wx_center_control',
+        user: 'root',
+        password: '',
+        charset: 'utf8mb4',
+    },
+    TABLE: { // 数据库表
+        OFFICIAL: 'official', // 公众号
+        OFFICIAL_USER: 'official_user', // 公众号_用户
+    }
+};
 
 /*
 * 在think-wechat中间件插件配置处使用 => src/config/middleware/
@@ -23,3 +32,8 @@ export const WECHAT_DEVELOPER_ROUTE = '/serve';
 * 在think-wechat中间件插件配置处使用 => src/config/middleware/
 * */
 export const WECHAT_DEVELOPER_TOKEN = 'zyq';
+
+/*
+* 对接的小程序列表
+* */
+export const WECHAT_MINI_PROGRAM_LIST = []
