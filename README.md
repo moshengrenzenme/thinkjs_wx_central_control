@@ -97,6 +97,86 @@ create table official_user
     comment '公众号_用户';
 ```
 
+### admin_user
+
+> 管理员用户表
+
+```mysql
+create table admin_user
+(
+    id       int auto_increment comment '主键'
+        primary key,
+    username varchar(255) null comment '用户名',
+    password varchar(255) null comment '密码',
+    nickname varchar(255) null comment '昵称',
+    phone    double       null comment '电话号码'
+)
+    comment '管理员用户表';
+```
+
+### admin_role
+
+> 管理员角色表
+
+```mysql
+create table admin_role
+(
+    id   int auto_increment comment '主键'
+        primary key,
+    name varchar(255) null comment '名称'
+)
+    comment '管理员角色表';
+```
+
+### admin_user_role
+
+> 管理员用户角色关联表
+
+```mysql
+create table admin_user_role
+(
+    id      int auto_increment comment '主键'
+        primary key,
+    user_id int not null comment '管理员用户id',
+    role_id int not null comment '管理员角色id'
+)
+    comment '管理员用户角色关联表';
+```
+
+### admin_auth
+
+> 管理员权限表
+
+```mysql
+create table admin_auth
+(
+    id         int auto_increment comment '主键'
+        primary key,
+    name       varchar(255)   not null comment '权限名称',
+    group_name varchar(255)   null comment '分组名称',
+    parent_id  int default -1 not null comment '父级id',
+    sort       int default 0  not null comment '排序',
+    type       int            not null comment '权限类型(1:路由；2:接口；3:菜单)',
+    router     varchar(255)   null comment '路由'
+)
+    comment '管理员权限表';
+```
+
+### admin_role_auth
+
+> 管理员角色权限关联表
+
+```mysql
+create table admin_role_auth
+(
+    id      int auto_increment comment '主键'
+        primary key,
+    role_id int not null comment '角色id',
+    auth_id int not null comment '权限id'
+)
+    comment '管理员角色权限关联表';
+```
+
 ## 开发测试
 
 ### 1、申请微信测试号
