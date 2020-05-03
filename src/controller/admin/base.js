@@ -8,8 +8,13 @@ module.exports = class extends think.Controller {
         let requestUrl = that.ctx.request.url;
         if (!ADMIN_API_NOT_AUTH.includes(requestUrl)) {
             let selfInfo = await that.session(ADMIN_LOGIN_SESSION_NAME);
-            if (think.isEmpty(selfInfo)) return that.json(httpRes.err('请先登录再操作'))
+            if (think.isEmpty(selfInfo)) return that.json(httpRes.errLoginBeOverdue)
             that.selfInfo = selfInfo;
         }
+    }
+
+    __call() {
+        let that = this;
+        return that.json(httpRes.err('接口不存在'))
     }
 }

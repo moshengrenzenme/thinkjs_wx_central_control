@@ -11,8 +11,9 @@ module.exports = class extends think.Controller {
     * */
     async textAction() {
         let that = this;
-        let {signature, timestamp, nonce, openid} = that.get();
+        let {id, signature, timestamp, nonce, openid} = that.get();
         let {ToUserName, FromUserName, CreateTime, MsgType, Content, MsgId} = that.post();
+        that.saveOfficialUserLog({type: 'RECEIVE_TEXT', official_id: id, openid: openid, content: Content}); // 添加操作日志
         return that.success('')
     }
 
@@ -22,25 +23,25 @@ module.exports = class extends think.Controller {
     * */
     async eventAction() {
         let that = this;
-        let {signature, timestamp, nonce, openid} = that.get();
+        let {id, signature, timestamp, nonce, openid} = that.get();
         let {
             ToUserName, FromUserName, CreateTime, MsgType, Event, EventKey, Ticket, Latitude, Longitude, Precision,
             ScanCodeInfo, ScanType, ScanResult
         } = that.post();
-        console.log(Event);
         switch (Event) {
             case 'subscribe':// 关注
-                console.log('用户关注了');
+                that.saveOfficialUserLog({type: 'SUBSCRIBE', official_id: id, openid: openid}); // 添加操作日志
                 await resetCacheUserInfo(that.wechatInfo.id, openid); // 重置用户信息缓存
                 await getUserInfo(that.wechatInfo.id, openid); // 获取一次用户信息，保证数据库内是最新的数据
                 break;
             case 'unsubscribe':// 取消关注
-                console.log('用户取消关注了');
+                that.saveOfficialUserLog({type: 'UNSUBSCRIBE', official_id: id, openid: openid}); // 添加操作日志
                 await think.model(MODEL.TABLE.OFFICIAL_USER).where({openid: openid}).update({subscribe: 0}); // 修改为未关注
                 break;
             case 'SCAN':// 用户已关注后扫码
                 break;
             case 'LOCATION':// 地理位置
+                console.log('用户获取地理位置了');
                 break;
             case 'TEMPLATESENDJOBFINISH':// 模版消息发送完毕
                 break;
@@ -72,8 +73,9 @@ module.exports = class extends think.Controller {
     * */
     async imageAction() {
         let that = this;
-        let {signature, timestamp, nonce, openid} = that.get();
+        let {id, signature, timestamp, nonce, openid} = that.get();
         let {ToUserName, FromUserName, CreateTime, MsgType, PicUrl, MsgId, MediaId} = that.post();
+        that.saveOfficialUserLog({type: 'RECEIVE_IMAGE', official_id: id, openid: openid, content: MediaId}); // 添加操作日志
         return that.success('')
     }
 
@@ -83,8 +85,9 @@ module.exports = class extends think.Controller {
     * */
     async voiceAction() {
         let that = this;
-        let {signature, timestamp, nonce, openid} = that.get();
+        let {id, signature, timestamp, nonce, openid} = that.get();
         let {ToUserName, FromUserName, CreateTime, MsgType, Recognition, MsgId, MediaId, Format} = that.post();
+        that.saveOfficialUserLog({type: 'RECEIVE_VOICE', official_id: id, openid: openid, content: MediaId}); // 添加操作日志
         return that.success('')
     }
 

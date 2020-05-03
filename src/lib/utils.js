@@ -16,6 +16,7 @@ export const httpRes = {
     redirectLink: function (link) {
         return {code: 301, msg: '请求跳转', data: link}
     },
+    errLoginBeOverdue: {code: 401, msg: '登录信息过期', data: null},
     errNoResult: {code: 1, msg: '找不到结果', data: null},
     errArgumentMiss: {code: 1, msg: '提交信息有误', data: null},
     errSysBusy: {code: 1, msg: '系统繁忙', data: null},
