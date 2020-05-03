@@ -20,37 +20,6 @@
 
 - v3.0文档：https://thinkjs.org/zh-cn/doc/3.0/index.html
 
-
-
-## 当前实现接口
-
-- 微信鉴权登录（鉴权全过程由中控自己完成）
-- 前端获取sdk配置信息（自定义分享等功能使用）
-- 获取access_token
-- 获取微信用户信息
-- 批量发送客服消息 - 文字
-- 批量发送客服消息 - 语音
-- 批量发送客服消息 - 图片
-- 批量发送客服消息 - 音乐
-- 批量发送客服消息 - 图文
-- 获取已添加模版消息列表
-- 批量发送模版消息
-- 删除模版
-- 生成参数二维码
-- 生成短链接
-- 接收微信服务器推送信息
-  - 接收文字消息
-  - 接收事件消息
-    - 关注
-    - 取消关注
-    - 已关注扫码
-    - 地理位置
-    - 自定义菜单点击
-    - 自定义菜单跳转
-    - 模版消息发送完毕
-  - 接收图片消息
-  - 接收语音消息
-
 ## 数据库
 
 ### official
@@ -60,12 +29,15 @@
 ```mysql
 create table official
 (
-    id     int auto_increment comment '主键'
+    id          int auto_increment comment '主键'
         primary key,
-    name   varchar(255) null comment '公众号名称',
-    `desc` varchar(255) null comment '公众号说明',
-    appid  varchar(255) null comment '公众号appid',
-    secret varchar(255) null comment '公众号secret'
+    name        varchar(255) null comment '公众号名称',
+    `desc`      varchar(255) null comment '公众号说明',
+    appid       varchar(255) null comment '公众号appid',
+    secret      varchar(255) null comment '公众号secret',
+    qr_img_url  longtext     null comment '关注二维码图片链接',
+    add_time    double       null comment '新增时间',
+    update_time double       null comment '最后修改时间'
 )
     comment '公众号';
 ```
@@ -97,6 +69,43 @@ create table official_user
     comment '公众号_用户';
 ```
 
+### official_user_log
+
+> 公众号用户操作日志表
+
+```mysql
+create table official_user_log
+(
+    id          int auto_increment comment '主键'
+        primary key,
+    type        int           null comment '操作类型',
+    `desc`      longtext      null comment '描述(中文)',
+    official_id int           not null comment '公众号id',
+    openid      varchar(255)  not null comment '微信用户openid',
+    params      longtext      null comment '操作参数',
+    is_success  int default 1 null comment '0：失败；1：成功',
+    is_active   int default 0 null comment '0：接收；1：发送',
+    error_msg   longtext      null comment '错误信息',
+    add_time    double        null comment '添加时间'
+)
+    comment '公众号_用户_日志';
+
+create index idx_is_active
+    on official_user_log (is_active);
+
+create index idx_is_success
+    on official_user_log (is_success);
+
+create index idx_official_id
+    on official_user_log (official_id);
+
+create index idx_openid
+    on official_user_log (openid);
+
+create index idx_type
+    on official_user_log (type);
+```
+
 ### admin_user
 
 > 管理员用户表
@@ -104,12 +113,15 @@ create table official_user
 ```mysql
 create table admin_user
 (
-    id       int auto_increment comment '主键'
+    id          int auto_increment comment '主键'
         primary key,
-    username varchar(255) null comment '用户名',
-    password varchar(255) null comment '密码',
-    nickname varchar(255) null comment '昵称',
-    phone    double       null comment '电话号码'
+    username    varchar(255)  null comment '用户名',
+    password    varchar(255)  null comment '密码',
+    nickname    varchar(255)  null comment '昵称',
+    phone       double        null comment '电话号码',
+    is_enable   int default 1 null comment '是否启用',
+    add_time    double        null comment '添加时间',
+    update_time double        null comment '最后修改时间'
 )
     comment '管理员用户表';
 ```
@@ -156,7 +168,7 @@ create table admin_auth
     group_name varchar(255)   null comment '分组名称',
     parent_id  int default -1 not null comment '父级id',
     sort       int default 0  not null comment '排序',
-    type       int            not null comment '权限类型(1:路由；2:接口；3:菜单)',
+    type       int            not null comment '权限类型(1:路由；2:接口)',
     router     varchar(255)   null comment '路由'
 )
     comment '管理员权限表';
