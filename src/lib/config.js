@@ -3,7 +3,7 @@
 *   微信公众号接口配置使用；
 *   业务系统调用使用；
 * */
-export const CENTRAL_CONTROL_SERVE_URL = 'https://f0f49391.ngrok.io';
+export const CENTRAL_CONTROL_SERVE_URL = 'https://9d58be24926c.ngrok.io';
 
 /*
 * 在think-wechat中间件插件配置处使用 => src/config/middleware/
@@ -53,3 +53,17 @@ export const ADMIN_LOGIN_SESSION_NAME = 'admin';
 * 后台管理系统不校验登录权限的接口
 * */
 export const ADMIN_API_NOT_AUTH = ['/admin/system/login'];
+
+/*
+*  数据字典
+* */
+export const DICTIONARY = {
+    OFFICIAL_USER_OPERATION_TYPE: { //微信公众号用户操作日志类型
+        CUSTOMER_MSG_SEND_TEXT: 'SEND_TEXT', // 发送文字消息
+        CUSTOMER_MSG_RECEIVE_TEXT: 'RECEIVE_TEXT', // 接收文字消息
+        CUSTOMER_MSG_RECEIVE_IMAGE: 'RECEIVE_IMAGE', // 接收图片消息
+        CUSTOMER_MSG_RECEIVE_VOICE: 'RECEIVE_VOICE', // 接收语音消息
+        EVENT_SUBSCRIBE: 'SUBSCRIBE', // 关注事件
+        EVENT_UNSUBSCRIBE: 'UNSUBSCRIBE',   // 取消关注事件
+    }
+}
