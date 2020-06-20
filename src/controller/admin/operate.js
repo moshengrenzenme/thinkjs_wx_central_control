@@ -5,7 +5,8 @@
 
 const Base = require('./base');
 import {httpRes} from "../../lib/utils";
-import {MODEL} from "../../lib/config";
+import {MODEL, DICTIONARY} from "../../lib/config";
+import {customSendText} from "../../api/wechat.official";
 
 module.exports = class extends Base {
     /*
@@ -20,7 +21,7 @@ module.exports = class extends Base {
         if (!think.isEmpty(official_id)) where[`${MODEL.TABLE.OFFICIAL_USER}.official_id`] = ['in', official_id];
         if (!think.isEmpty(user_nickname)) where[`${MODEL.TABLE.OFFICIAL_USER}.nickname`] = ['like', `%${user_nickname}%`];
         if (!think.isEmpty(user_sex)) where[`${MODEL.TABLE.OFFICIAL_USER}.sex`] = ['in', user_sex];
-        if (!think.isEmpty(user_subscribe)) where[`${MODEL.TABLE.OFFICIAL_USER}.subscribe`] = user_subscribe;
+        if (!think.isTrueEmpty(user_subscribe)) where[`${MODEL.TABLE.OFFICIAL_USER}.subscribe`] = user_subscribe;
         if (!think.isEmpty(user_province)) where[`${MODEL.TABLE.OFFICIAL_USER}.province`] = ['like', `%${user_province}%`];
         if (!think.isEmpty(user_country)) where[`${MODEL.TABLE.OFFICIAL_USER}.country`] = ['like', `%${user_country}%`];
         if (!think.isEmpty(user_city)) where[`${MODEL.TABLE.OFFICIAL_USER}.city`] = ['like', `%${user_city}%`];
@@ -39,9 +40,12 @@ module.exports = class extends Base {
                 ${MODEL.TABLE.OFFICIAL_USER}.subscribe as user_subscribe,
                 ${MODEL.TABLE.OFFICIAL_USER}.subscribe_time as user_subscribe_time,
                 ${MODEL.TABLE.OFFICIAL_USER}.openid as user_openid,
+                ${MODEL.TABLE.OFFICIAL_USER}.last_operation_time as user_last_operation_time,
+                ${MODEL.TABLE.OFFICIAL_USER}.last_operation_type as user_last_operation_type,
                 ${MODEL.TABLE.OFFICIAL}.id as official_id,
                 ${MODEL.TABLE.OFFICIAL}.name as official_name
             `)
+            .order({[`${MODEL.TABLE.OFFICIAL_USER}.subscribe_time`]: 'desc'})
             .where(where);
         let userList = think.isEmpty(page) ?
             await userListSql.select() :
@@ -77,11 +81,33 @@ module.exports = class extends Base {
                 ${MODEL.TABLE.OFFICIAL}.id as official_id,
                 ${MODEL.TABLE.OFFICIAL}.name as official_name
             `)
-            .order({[`${MODEL.TABLE.OFFICIAL_USER_LOG}.add_time`]: 'desc'})
+            .order({
+                [`${MODEL.TABLE.OFFICIAL_USER_LOG}.add_time`]: 'desc'
+            })
             .where(where);
         let userLogList = think.isEmpty(page) ?
             await userLogListSql.select() :
             await userLogListSql.page(page, size).countSelect();
         return that.json(httpRes.suc(userLogList))
+    }
+
+    /*
+    * 微信公众号
+    *   给用户发送客服消息
+    * */
+    async send_customer_msgAction() {
+        let that = this;
+        let {official_id, user_openid, msg_type, msg_content} = that.post();
+        if (think.isEmpty(official_id) || think.isEmpty(user_openid) || think.isEmpty(msg_type) || think.isEmpty(msg_type)) return that.json(httpRes.errArgumentMiss);
+        let logInfo = {official_id: official_id, openid: user_openid}
+        if (msg_type === 'text') {
+            logInfo.content = msg_content;
+            logInfo.type = DICTIONARY.OFFICIAL_USER_OPERATION_TYPE.CUSTOMER_MSG_SEND_TEXT;
+            let {code, msg} = await customSendText(official_id, user_openid, msg_content);
+            logInfo.is_success = code === 0 ? 1 : 0;
+            logInfo.error_msg = code === 0 ? null : msg;
+        }
+        that.saveOfficialUserLog(logInfo, false);
+        return that.json(httpRes.suc());
     }
 }

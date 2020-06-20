@@ -1,7 +1,7 @@
 // 微信公众号服务端对接
 
 import {getConfigById, getUserInfo, resetCacheUserInfo} from "../api/wechat.official";
-import {MODEL} from "../lib/config";
+import {MODEL, DICTIONARY} from "../lib/config";
 
 module.exports = class extends think.Controller {
 
@@ -13,7 +13,12 @@ module.exports = class extends think.Controller {
         let that = this;
         let {id, signature, timestamp, nonce, openid} = that.get();
         let {ToUserName, FromUserName, CreateTime, MsgType, Content, MsgId} = that.post();
-        that.saveOfficialUserLog({type: 'RECEIVE_TEXT', official_id: id, openid: openid, content: Content}); // 添加操作日志
+        that.saveOfficialUserLog({
+            type: DICTIONARY.OFFICIAL_USER_OPERATION_TYPE.CUSTOMER_MSG_RECEIVE_TEXT,
+            official_id: id,
+            openid: openid,
+            content: Content
+        }); // 添加操作日志
         return that.success('')
     }
 
@@ -30,13 +35,21 @@ module.exports = class extends think.Controller {
         } = that.post();
         switch (Event) {
             case 'subscribe':// 关注
-                that.saveOfficialUserLog({type: 'SUBSCRIBE', official_id: id, openid: openid}); // 添加操作日志
                 await resetCacheUserInfo(that.wechatInfo.id, openid); // 重置用户信息缓存
                 await getUserInfo(that.wechatInfo.id, openid); // 获取一次用户信息，保证数据库内是最新的数据
+                that.saveOfficialUserLog({
+                    type: DICTIONARY.OFFICIAL_USER_OPERATION_TYPE.EVENT_SUBSCRIBE,
+                    official_id: id,
+                    openid: openid
+                }); // 添加操作日志
                 break;
             case 'unsubscribe':// 取消关注
-                that.saveOfficialUserLog({type: 'UNSUBSCRIBE', official_id: id, openid: openid}); // 添加操作日志
                 await think.model(MODEL.TABLE.OFFICIAL_USER).where({openid: openid}).update({subscribe: 0}); // 修改为未关注
+                that.saveOfficialUserLog({
+                    type: DICTIONARY.OFFICIAL_USER_OPERATION_TYPE.EVENT_UNSUBSCRIBE,
+                    official_id: id,
+                    openid: openid
+                }); // 添加操作日志
                 break;
             case 'SCAN':// 用户已关注后扫码
                 break;
@@ -75,7 +88,12 @@ module.exports = class extends think.Controller {
         let that = this;
         let {id, signature, timestamp, nonce, openid} = that.get();
         let {ToUserName, FromUserName, CreateTime, MsgType, PicUrl, MsgId, MediaId} = that.post();
-        that.saveOfficialUserLog({type: 'RECEIVE_IMAGE', official_id: id, openid: openid, content: MediaId}); // 添加操作日志
+        that.saveOfficialUserLog({
+            type: DICTIONARY.OFFICIAL_USER_OPERATION_TYPE.CUSTOMER_MSG_RECEIVE_IMAGE,
+            official_id: id,
+            openid: openid,
+            content: MediaId
+        }); // 添加操作日志
         return that.success('')
     }
 
@@ -87,7 +105,12 @@ module.exports = class extends think.Controller {
         let that = this;
         let {id, signature, timestamp, nonce, openid} = that.get();
         let {ToUserName, FromUserName, CreateTime, MsgType, Recognition, MsgId, MediaId, Format} = that.post();
-        that.saveOfficialUserLog({type: 'RECEIVE_VOICE', official_id: id, openid: openid, content: MediaId}); // 添加操作日志
+        that.saveOfficialUserLog({
+            type: DICTIONARY.OFFICIAL_USER_OPERATION_TYPE.CUSTOMER_MSG_RECEIVE_VOICE,
+            official_id: id,
+            openid: openid,
+            content: MediaId
+        }); // 添加操作日志
         return that.success('')
     }
 

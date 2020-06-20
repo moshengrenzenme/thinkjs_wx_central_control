@@ -6,6 +6,7 @@
 const Base = require('./base');
 import {httpRes} from "../../lib/utils";
 import {MODEL, CENTRAL_CONTROL_SERVE_URL, WECHAT_DEVELOPER_ROUTE, WECHAT_DEVELOPER_TOKEN} from "../../lib/config";
+import {getAccessTokenById} from "../../api/wechat.official";
 
 module.exports = class extends Base {
     /*
@@ -106,6 +107,18 @@ module.exports = class extends Base {
             token: WECHAT_DEVELOPER_TOKEN
         }
         return that.json(httpRes.suc(resData));
+    }
+
+    /*
+    * 公众号
+    *   获取ACCESS_TOKEN
+    * */
+    async get_official_access_tokenAction() {
+        let that = this;
+        let {official_id} = that.post();
+        if (think.isEmpty(official_id)) return that.json(httpRes.errArgumentMiss);
+        let accessToken = await getAccessTokenById(official_id);
+        return that.json(accessToken)
     }
 
 }

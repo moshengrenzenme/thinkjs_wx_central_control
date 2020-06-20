@@ -78,7 +78,12 @@ module.exports = class extends think.Controller {
         let jsapiTicketRes = await getJsapiTicketById(that.wechatInfo.id);
         if (jsapiTicketRes.code != 0) return that.json(jsapiTicketRes);
         let {data: {ticket}} = jsapiTicketRes;
-        let shareConfig = {nonceStr: getNonceStr(), jsapi_ticket: ticket, timestamp: getTimestamp(), url: url}
+        let shareConfig = {
+            nonceStr: getNonceStr(),
+            jsapi_ticket: ticket,
+            timestamp: getTimestamp(),
+            url: url
+        }
         let signature = getSignature(shareConfig);
         return that.json(httpRes.suc({
             appId: that.wechatInfo.appid,
