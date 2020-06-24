@@ -4,7 +4,7 @@
 * */
 
 const Base = require('./base');
-import {httpRes, downloadFile} from "../../lib/utils";
+import {httpRes, downloadFile, unlinkFile} from "../../lib/utils";
 import {MODEL, DICTIONARY} from "../../lib/config";
 import {customSendImage, customSendText, uploadMedia} from "../../api/wechat.official";
 
@@ -121,6 +121,7 @@ module.exports = class extends Base {
             logInfo.type = DICTIONARY.OFFICIAL_USER_OPERATION_TYPE.CUSTOMER_MSG_SEND_IMAGE;
             logInfo.is_success = sendRes.code === 0 ? 1 : 0;
             logInfo.error_msg = sendRes.code === 0 ? null : sendRes.msg;
+            unlinkFile(path);
         }
         that.saveOfficialUserLog(logInfo, false);
         return that.json(httpRes.suc());
