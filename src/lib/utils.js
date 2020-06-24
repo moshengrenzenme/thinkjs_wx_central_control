@@ -3,9 +3,19 @@
 * */
 
 const sha1 = require('sha1');
+const fs = require('fs');
+const request = require('request')
 export const getTimestamp = () => parseInt(Date.now() / 1000);
 export const getNonceStr = () => Math.random().toString(36).substr(2, 15);
 export const getSignature = (params) => sha1(Object.keys(params).sort().map(key => `${key.toLowerCase()}=${params[key]}`).join('&'));
+export const downloadFile = (url, fileName) => {
+    return new Promise((resolve) => {
+        request(url).pipe(fs.createWriteStream(`temp_upload/${fileName}`).on('close', err => {
+            if (err) return resolve({code: 1, msg: err});
+            resolve({code: 0, data: {path: `temp_upload/${fileName}`}});
+        }))
+    })
+}
 export const httpRes = {
     suc: function (data = null) {
         return {code: 0, msg: '请求成功', data: data}

@@ -329,4 +329,82 @@ module.exports = class extends Base {
         await that.model(MODEL.TABLE.ADMIN_ROLE_AUTH).where({auth_id: auth_id}).delete();
         return that.json(httpRes.suc());
     }
+
+    /*
+    * 常量
+    *   列表
+    * */
+    async get_constant_listAction() {
+        let that = this;
+        let {page, size = 20} = that.get();
+        let {key, desc} = that.post();
+        let where = {};
+        if (!think.isEmpty(key)) where[`${MODEL.TABLE.ADMIN_CONSTANT}.key`] = ['like', `%${key}%`];
+        if (!think.isEmpty(desc)) where[`${MODEL.TABLE.ADMIN_CONSTANT}.desc`] = ['like', `%${desc}%`];
+        let constantListSql = await that.model(MODEL.TABLE.ADMIN_CONSTANT)
+            .field(`
+                ${MODEL.TABLE.ADMIN_CONSTANT}.id as constant_id,
+                ${MODEL.TABLE.ADMIN_CONSTANT}.desc as constant_desc,
+                ${MODEL.TABLE.ADMIN_CONSTANT}.content as constant_content,
+                ${MODEL.TABLE.ADMIN_CONSTANT}.key as constant_key
+            `)
+            .order({
+                [`${MODEL.TABLE.ADMIN_CONSTANT}.id`]: 'asc'
+            })
+            .where(where);
+        let authList = think.isEmpty(page) ?
+            await constantListSql.select() :
+            await constantListSql.page(page, size).countSelect();
+        return that.json(httpRes.suc(authList))
+    }
+
+    /*
+   * 常量
+   *   获取详情
+   * */
+    async get_constant_infoAction() {
+        let that = this;
+        let {constant_id, constant_key} = that.post();
+        let where = {};
+        if (!think.isEmpty(constant_id)) where[`${MODEL.TABLE.ADMIN_CONSTANT}.id`] = constant_id;
+        if (!think.isEmpty(constant_key)) where[`${MODEL.TABLE.ADMIN_CONSTANT}.key`] = constant_key;
+        if (think.isEmpty(where)) return that.json(httpRes.errArgumentMiss);
+        let auth = await that.model(MODEL.TABLE.ADMIN_CONSTANT)
+            .field(`
+                ${MODEL.TABLE.ADMIN_CONSTANT}.id as constant_id,
+                ${MODEL.TABLE.ADMIN_CONSTANT}.desc as constant_desc,
+                ${MODEL.TABLE.ADMIN_CONSTANT}.content as constant_content,
+                ${MODEL.TABLE.ADMIN_CONSTANT}.key as constant_key
+           `)
+            .where(where)
+            .find();
+        if (think.isEmpty(auth)) return that.json(httpRes.err('该常量不存在'));
+        return that.json(httpRes.suc(auth));
+    }
+
+    /*
+   * 常量
+   *   修改信息
+   * */
+    async edit_constant_infoAction() {
+        let that = this;
+        let {constant_id, constant_desc, constant_content, constant_key} = that.post();
+        if (think.isEmpty(constant_content) || think.isEmpty(constant_key)) return that.json(httpRes.errArgumentMiss);
+        let handleData = {
+            key: constant_key,
+            desc: constant_desc,
+            content: constant_content
+        };
+        if (constant_id) {
+            // 修改权限信息
+            let updateRow = await that.model(MODEL.TABLE.ADMIN_CONSTANT)
+                .where({id: constant_id})
+                .update(handleData)
+        } else {
+            // 添加权限信息
+            constant_id = await that.model(MODEL.TABLE.ADMIN_CONSTANT)
+                .add(handleData);
+        }
+        return that.json(httpRes.suc());
+    }
 }

@@ -36,6 +36,7 @@ export const MODEL = {
         ADMIN_ROLE: 'admin_role', // 管理员_角色
         ADMIN_ROLE_AUTH: 'admin_role_auth', // 管理员_角色_权限
         ADMIN_AUTH: 'admin_auth', // 管理员_权限
+        ADMIN_CONSTANT: 'admin_constant' // 常量
     }
 };
 
@@ -60,6 +61,7 @@ export const ADMIN_API_NOT_AUTH = ['/admin/system/login'];
 export const DICTIONARY = {
     OFFICIAL_USER_OPERATION_TYPE: { //微信公众号用户操作日志类型
         CUSTOMER_MSG_SEND_TEXT: 'SEND_TEXT', // 发送文字消息
+        CUSTOMER_MSG_SEND_IMAGE: 'SEND_IMAGE', // 发送图片消息
         CUSTOMER_MSG_RECEIVE_TEXT: 'RECEIVE_TEXT', // 接收文字消息
         CUSTOMER_MSG_RECEIVE_IMAGE: 'RECEIVE_IMAGE', // 接收图片消息
         CUSTOMER_MSG_RECEIVE_VOICE: 'RECEIVE_VOICE', // 接收语音消息

@@ -4,9 +4,9 @@
 * */
 
 const Base = require('./base');
-import {httpRes} from "../../lib/utils";
+import {httpRes, downloadFile} from "../../lib/utils";
 import {MODEL, DICTIONARY} from "../../lib/config";
-import {customSendText} from "../../api/wechat.official";
+import {customSendImage, customSendText, uploadMedia} from "../../api/wechat.official";
 
 module.exports = class extends Base {
     /*
@@ -98,7 +98,7 @@ module.exports = class extends Base {
     async send_customer_msgAction() {
         let that = this;
         let {official_id, user_openid, msg_type, msg_content} = that.post();
-        if (think.isEmpty(official_id) || think.isEmpty(user_openid) || think.isEmpty(msg_type) || think.isEmpty(msg_type)) return that.json(httpRes.errArgumentMiss);
+        if (think.isEmpty(official_id) || think.isEmpty(user_openid) || think.isEmpty(msg_type) || think.isTrueEmpty(msg_content)) return that.json(httpRes.errArgumentMiss);
         let logInfo = {official_id: official_id, openid: user_openid}
         if (msg_type === 'text') {
             logInfo.content = msg_content;
@@ -106,6 +106,21 @@ module.exports = class extends Base {
             let {code, msg} = await customSendText(official_id, user_openid, msg_content);
             logInfo.is_success = code === 0 ? 1 : 0;
             logInfo.error_msg = code === 0 ? null : msg;
+        }
+        if (msg_type === 'image') {
+            let fileName = msg_content.split('/').pop();
+            let downloadRes = await downloadFile(msg_content, fileName);
+            if (downloadRes.code !== 0) return that.json(httpRes.errSysBusy);
+            let {data: {path}} = downloadRes;
+            let uploadRes = await uploadMedia(official_id, 'image', `image/${path.split('.')[1]}`, path);
+            if (uploadRes.code !== 0) return that.json(uploadRes);
+            let {data: {media_id}} = uploadRes;
+            let sendRes = await customSendImage(official_id, user_openid, media_id);
+            if (uploadRes.code !== 0) return that.json(sendRes);
+            logInfo.content = media_id;
+            logInfo.type = DICTIONARY.OFFICIAL_USER_OPERATION_TYPE.CUSTOMER_MSG_SEND_IMAGE;
+            logInfo.is_success = sendRes.code === 0 ? 1 : 0;
+            logInfo.error_msg = sendRes.code === 0 ? null : sendRes.msg;
         }
         that.saveOfficialUserLog(logInfo, false);
         return that.json(httpRes.suc());
