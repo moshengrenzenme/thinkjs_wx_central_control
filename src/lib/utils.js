@@ -16,6 +16,14 @@ export const downloadFile = (url, fileName) => {
         }))
     })
 }
+export const unlinkFile = (url) => {
+    return new Promise((resolve) => {
+        fs.unlink(url, function (err) {
+            if (err) return resolve({code: 1, msg: err})
+            resolve({code: 0})
+        })
+    })
+}
 export const httpRes = {
     suc: function (data = null) {
         return {code: 0, msg: '请求成功', data: data}
