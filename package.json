@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "axios": "^0.19.2",
+    "fs": "^0.0.1-security",
     "request": "^2.88.2",
     "sha1": "^1.1.1",
     "think-cache": "^1.0.0",

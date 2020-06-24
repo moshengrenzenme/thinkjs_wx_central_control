@@ -120,5 +120,4 @@ module.exports = class extends Base {
         let accessToken = await getAccessTokenById(official_id);
         return that.json(accessToken)
     }
-
 }
