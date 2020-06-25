@@ -4,7 +4,7 @@
 * */
 
 const Base = require('./base');
-import {httpRes, downloadFile, unlinkFile} from "../../lib/utils";
+import {httpRes, downloadFile, unlinkFile, createdExcel, uploadOss} from "../../lib/utils";
 import {MODEL, DICTIONARY} from "../../lib/config";
 import {customSendImage, customSendText, uploadMedia} from "../../api/wechat.official";
 
@@ -51,6 +51,58 @@ module.exports = class extends Base {
             await userListSql.select() :
             await userListSql.page(page, size).countSelect();
         return that.json(httpRes.suc(userList))
+    }
+
+    /*
+    * 微信公众号
+    *   导出用户列表
+    * */
+    async export_official_user_listAction() {
+        let that = this;
+        let {official_id, user_nickname, user_sex, user_subscribe, user_province, user_country, user_city, user_openid} = that.post();
+        let where = {};
+        if (!think.isEmpty(official_id)) where[`${MODEL.TABLE.OFFICIAL_USER}.official_id`] = ['in', official_id];
+        if (!think.isEmpty(user_nickname)) where[`${MODEL.TABLE.OFFICIAL_USER}.nickname`] = ['like', `%${user_nickname}%`];
+        if (!think.isEmpty(user_sex)) where[`${MODEL.TABLE.OFFICIAL_USER}.sex`] = ['in', user_sex];
+        if (!think.isTrueEmpty(user_subscribe)) where[`${MODEL.TABLE.OFFICIAL_USER}.subscribe`] = user_subscribe;
+        if (!think.isEmpty(user_province)) where[`${MODEL.TABLE.OFFICIAL_USER}.province`] = ['like', `%${user_province}%`];
+        if (!think.isEmpty(user_country)) where[`${MODEL.TABLE.OFFICIAL_USER}.country`] = ['like', `%${user_country}%`];
+        if (!think.isEmpty(user_city)) where[`${MODEL.TABLE.OFFICIAL_USER}.city`] = ['like', `%${user_city}%`];
+        if (!think.isEmpty(user_openid)) where[`${MODEL.TABLE.OFFICIAL_USER}.openid`] = user_openid;
+        let userList = await that.model(MODEL.TABLE.OFFICIAL_USER)
+            .join(`${MODEL.TABLE.OFFICIAL} on ${MODEL.TABLE.OFFICIAL}.id = ${MODEL.TABLE.OFFICIAL_USER}.official_id`)
+            .field(`
+                ${MODEL.TABLE.OFFICIAL_USER}.id as user_id,
+                ${MODEL.TABLE.OFFICIAL_USER}.nickname as user_nickname,
+                ${MODEL.TABLE.OFFICIAL_USER}.sex as user_sex,
+                ${MODEL.TABLE.OFFICIAL_USER}.language as user_language,
+                ${MODEL.TABLE.OFFICIAL_USER}.province as user_province,
+                ${MODEL.TABLE.OFFICIAL_USER}.country as user_country,
+                ${MODEL.TABLE.OFFICIAL_USER}.city as user_city,
+                ${MODEL.TABLE.OFFICIAL_USER}.headimgurl as user_headimgurl,
+                ${MODEL.TABLE.OFFICIAL_USER}.subscribe as user_subscribe,
+                ${MODEL.TABLE.OFFICIAL_USER}.subscribe_time as user_subscribe_time,
+                ${MODEL.TABLE.OFFICIAL_USER}.openid as user_openid,
+                ${MODEL.TABLE.OFFICIAL_USER}.last_operation_time as user_last_operation_time,
+                ${MODEL.TABLE.OFFICIAL_USER}.last_operation_type as user_last_operation_type,
+                ${MODEL.TABLE.OFFICIAL}.id as official_id,
+                ${MODEL.TABLE.OFFICIAL}.name as official_name
+            `)
+            .order({[`${MODEL.TABLE.OFFICIAL_USER}.subscribe_time`]: 'desc'})
+            .where(where)
+            .select();
+        let excelPath = await createdExcel({
+            data: userList,
+            fields: [
+                {field_id: 'user_id', field_name: "系统ID"},
+                {field_id: 'official_name', field_name: "公众号"},
+                {field_id: 'user_openid', field_name: "OPENID"},
+                {field_id: 'user_nickname', field_name: "昵称"},
+                {field_id: 'user_subscribe', field_name: "是否关注", format: (value) => value == 1 ? '已关注' : '未关注'},
+            ]
+        })
+        let {url} = await uploadOss(await that.getAliOssConfig(), excelPath);
+        return that.json(httpRes.suc(url))
     }
 
     /*
